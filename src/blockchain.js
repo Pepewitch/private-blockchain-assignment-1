@@ -75,10 +75,11 @@ class Blockchain {
         block.time = Date.now();
         block.hash = block.generateCurrentHash();
         self.chain.push(block);
-        this.height += 1;
-        await this.validateChain();
+        self.height += 1;
+        await self.validateChain();
         resolve();
       } catch (error) {
+        console.error(error)
         reject(error);
       }
     });
@@ -202,7 +203,7 @@ class Blockchain {
     let errorLog = [];
     return new Promise(async (resolve, reject) => {
       let previousBlockHash = null;
-      for (const block in this.chain) {
+      for (const block of this.chain) {
         try {
           const isGenesisBlock =
             previousBlockHash === null && block.height === 0;
