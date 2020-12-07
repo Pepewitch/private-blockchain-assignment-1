@@ -76,6 +76,7 @@ class Blockchain {
         block.hash = block.generateCurrentHash();
         self.chain.push(block);
         this.height += 1;
+        await this.validateChain();
         resolve();
       } catch (error) {
         reject(error);
@@ -120,15 +121,14 @@ class Blockchain {
    * @param {*} star
    */
   submitStar(address, message, signature, star) {
-    let self = this;
     return new Promise(async (resolve, reject) => {
       const time = parseInt(message.split(":")[1]);
       const currentTime = parseInt(
         new Date().getTime().toString().slice(0, -3)
       );
-      // if (currentTime - time > 5 * 60) {
-      //   return reject("Signature Timeout");
-      // }
+      if (currentTime - time > 5 * 60) {
+        return reject("Signature Timeout");
+      }
       if (!bitcoinMessage.verify(message, address, signature)) {
         return reject("Invalid signature");
       }
@@ -164,7 +164,7 @@ class Blockchain {
   getBlockByHeight(height) {
     let self = this;
     return new Promise((resolve, reject) => {
-      let block = self.chain.filter((p) => p.height === height)[0];
+      let block = self.chain.find((p) => p.height === height);
       if (block) {
         resolve(block);
       } else {
@@ -199,20 +199,20 @@ class Blockchain {
    * 2. Each Block should check the with the previousBlockHash
    */
   validateChain() {
-    let self = this;
     let errorLog = [];
     return new Promise(async (resolve, reject) => {
       let previousBlockHash = null;
-      try {
-        for (const block in this.chain) {
-          if (previousBlockHash === null && block.height === -1) {
+      for (const block in this.chain) {
+        try {
+          const isGenesisBlock =
+            previousBlockHash === null && block.height === 0;
+          if (isGenesisBlock) {
             previousBlockHash = block.hash;
             continue;
           }
-          if (!(await block.validate())) {
-            throw new Error(
-              `Block ${block.height} has invalid data.`
-            );
+          const isValidBlock = await block.validate();
+          if (!isValidBlock) {
+            throw new Error(`Block ${block.height} has invalid data.`);
           }
           if (block.previousBlockHash !== previousBlockHash) {
             throw new Error(
@@ -220,9 +220,14 @@ class Blockchain {
             );
           }
           previousBlockHash = block.hash;
+        } catch (error) {
+          errorLog.push(error);
         }
-      } catch (error) {
-        errorLog.push(error);
+      }
+      if (errorLog.length === 0) {
+        resolve();
+      } else {
+        reject(errorLog);
       }
     });
   }
