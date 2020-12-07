@@ -209,7 +209,11 @@ class Blockchain {
             previousBlockHash = block.hash;
             continue;
           }
-          await block.validate();
+          if (!(await block.validate())) {
+            throw new Error(
+              `Block ${block.height} has invalid data.`
+            );
+          }
           if (block.previousBlockHash !== previousBlockHash) {
             throw new Error(
               `Block ${block.height} has invalid previous block hash.`
