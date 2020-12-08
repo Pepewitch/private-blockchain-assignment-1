@@ -79,7 +79,7 @@ class Blockchain {
         await self.validateChain();
         resolve();
       } catch (error) {
-        console.error(error)
+        console.error(error);
         reject(error);
       }
     });
@@ -128,19 +128,19 @@ class Blockchain {
         new Date().getTime().toString().slice(0, -3)
       );
       if (currentTime - time > 5 * 60) {
-        return reject("Signature Timeout");
+        reject("Signature Timeout");
+      } else if (!bitcoinMessage.verify(message, address, signature)) {
+        reject("Invalid signature");
+      } else {
+        const block = new BlockClass.Block({
+          address,
+          message,
+          signature,
+          star,
+        });
+        this._addBlock(block);
+        resolve(block);
       }
-      if (!bitcoinMessage.verify(message, address, signature)) {
-        return reject("Invalid signature");
-      }
-      const block = new BlockClass.Block({
-        address,
-        message,
-        signature,
-        star,
-      });
-      this._addBlock(block);
-      return resolve(block);
     });
   }
 
